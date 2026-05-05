@@ -2,14 +2,11 @@ import { use, useState } from 'react';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 
-import Logo from '@assets/images/cat-icon.svg';
-
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Button } from '@/components/button';
 import { Input } from '@/components/input';
 import { Card } from '@/components/card';
-import { Alert } from '@/components/alert';   
-import { Icon } from '@/components/icon';
+import { Alert } from '@/components/alert';
 
 export default function Index() {
     const [name, setName] = useState<string>('');
@@ -45,7 +42,10 @@ export default function Index() {
     return (
         <View style={styles.container}>
             <Card>
-                <Icon name={Logo} size={200} />
+                <Image 
+                    source={require('@assets/images/cat-icon.svg')} 
+                    style={{ width: 200, height: 200 }} 
+                />
                 <Input 
                     placeholder="Usuario" 
                     onChangeText={setName} />
