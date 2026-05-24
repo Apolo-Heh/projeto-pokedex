@@ -2,8 +2,6 @@ import React from "react";
 import { styles } from "./styles";
 import { FlatList, View } from "react-native";
 
-import { Card } from "@/components/card";
-
 interface ListProps {
   data: any[];
   onLoadMore: () => void;
@@ -19,7 +17,7 @@ export function List({ data, onLoadMore, renderItemContent, listStyle }: ListPro
       renderItem={({ item }) => <View>{renderItemContent(item)}</View>}
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.2}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, listStyle]}
     />
   );
 }

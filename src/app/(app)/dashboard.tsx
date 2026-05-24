@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { PokemonClient } from "pokenode-ts";
 
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { Button } from "@/components/button";
@@ -11,41 +11,54 @@ import { Card } from "@/components/card";
 import { PokeType } from "@/components/poketype";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
 
+type PokemonCard = {
+  id: number;
+  name: string;
+  sprite: string;
+  types: PokeTypes[];
+};
+
 export default function Dashboard() {
   const { user, signOut } = useAuth();
+  const [pokemon, setPokemon] = useState<PokemonCard[]>([]);
 
-  const pokemon = [
-    {
-      id: 1,
-      name: "bulbasaur",
-      types: ["grass", "poison"],
-      sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png",
-    },
-    {
-      id: 4,
-      name: "charmander",
-      types: ["fire"],
-      sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png",
-    },
-    {
-      id: 7,
-      name: "squirtle",
-      types: ["water"],
-      sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png",
-    },
-    {
-      id: 25,
-      name: "pikachu",
-      types: ["electric"],
-      sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png",
-    },
-    {
-      id: 133,
-      name: "eevee",
-      types: ["normal"],
-      sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png",
-    },
-  ];
+  useEffect(() => {
+    let isActive = true;
+    const previousOverflowY = Platform.OS === "web" ? document.body.style.overflowY : "";
+
+    if (Platform.OS === "web") {
+      document.body.style.overflowY = "auto";
+    }
+
+    const loadPokemon = async () => {
+      const api = new PokemonClient();
+      const list = await api.listPokemons(0, 150);
+      const details = await Promise.all(list.results.map(({ name }) => api.getPokemonByName(name)));
+
+      if (!isActive) {
+        return;
+      }
+
+      setPokemon(
+        details.map((item) => ({
+          id: item.id,
+          name: item.name,
+          sprite: item.sprites.other?.["official-artwork"].front_default ?? item.sprites.front_default ?? "",
+          types: item.types.map((type) => type.type.name as PokeTypes),
+        })),
+      );
+    };
+
+    loadPokemon().catch((error) => console.error(error));
+
+    return () => {
+      isActive = false;
+
+      if (Platform.OS === "web") {
+        document.body.style.overflowY = previousOverflowY;
+      }
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -58,8 +71,12 @@ export default function Dashboard() {
         onLoadMore={() => {}}
         listStyle={styles.list}
         renderItemContent={(item) => (
-          <Card style={[styles.card, { borderColor: PokeTypeStyles[item.types[0] as PokeTypes].color }]}>
-            <Image style={styles.cardImage} source={{ uri: item.sprite }} width={120} height={120} />
+          <Card
+            style={[
+              styles.card,
+              { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color },
+            ]}>
+            <Image style={styles.cardImage} source={{ uri: item.sprite }} />
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>{item.name}</Text>
               <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
