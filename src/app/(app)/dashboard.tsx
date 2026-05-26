@@ -16,8 +16,8 @@ type PokemonCard = {
   types: PokeTypes[];
 };
 
-// 1. Increased skeleton count to 12
-const SKELETON_DATA: PokemonCard[] = Array.from({ length: 12 }, (_, i) => ({
+// 1. Increased skeleton count to 50
+const SKELETON_DATA: PokemonCard[] = Array.from({ length: 50 }, (_, i) => ({
   id: i,
   name: "",
   sprite: "",
@@ -130,11 +130,13 @@ export default function Dashboard() {
                 styles.card,
                 { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color },
               ]}>
-              <Image style={styles.cardImage} source={{ uri: item.sprite }} />
+              <View style={styles.cardImageContainer}>
+                <Image style={styles.cardImage} source={{ uri: item.sprite }} resizeMode="contain" />
+              </View>
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{item.name}</Text>
                 <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
-                <View style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <View style={styles.typesContainer}>
                   {item.types.map((type: PokeTypes) => (
                     <PokeType key={type} type={type} />
                   ))}
@@ -152,6 +154,8 @@ export const styles = StyleSheet.create({
   container: {
     padding: 32,
     gap: 8,
+    flex: 1,
+    backgroundColor: "#f5f5f5",
   },
   title: {
     color: "#333",
@@ -166,15 +170,20 @@ export const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 16,
+    flexGrow: 1,
   },
   card: {
     display: "flex",
     flexDirection: "row",
-    width: "100%",
+    width: 380,
+    minHeight: 140,
     paddingBlock: 6,
     paddingInline: 18,
     borderRadius: 12,
     borderWidth: 2,
+    overflow: "hidden",
   },
   cardTitle: {
     fontSize: 20,
@@ -189,9 +198,14 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#555",
   },
+  cardImageContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 100,
+  },
   cardImage: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
   },
   cardContent: {
     display: "flex",
@@ -199,6 +213,14 @@ export const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 18,
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  typesContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    height: 56,
   },
   skeletonCard: {
     borderColor: "#E1E9EE",

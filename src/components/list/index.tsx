@@ -18,6 +18,7 @@ export function List({ data, onLoadMore, renderItemContent, listStyle }: ListPro
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.2}
       contentContainerStyle={[styles.container, listStyle]}
+      style={{ flex: 1 }}
     />
   );
 }

@@ -4,11 +4,9 @@ export const styles = StyleSheet.create({
   container: {
     paddingBottom: 20,
     gap: 16,
-    width: Platform.select({
-      android: "100%",
-      default: "50%",
-    }),
-    margin: "auto",
+    justifyContent: "center",
+    alignItems: "center",
+    flexGrow: 1,
   },
   cardMargin: {
     marginBottom: 16,

@@ -5,10 +5,8 @@ import { View, Text, StyleSheet, Platform } from "react-native";
 export default function Profile() {
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <CustomHeader></CustomHeader>
-            </View>
-            <View style={styles.content}>
+            <CustomHeader />
+            <View style={styles.contentContainer}>
                 <View style={styles.contentIn}>
                     <View style={styles.containerNome}>
                         <Text>
@@ -32,29 +30,24 @@ export default function Profile() {
                     </View>
                 </View>
             </View>
-
         </View>
     )
 }
 export const styles = StyleSheet.create({
     container: {
-        borderColor:"red",
-        borderWidth:5,
+        padding: 32,
+        gap: 8,
+        flex: 1,
+        backgroundColor: "#f5f5f5",
     },
-    header: {
-        height:100,
-        borderColor:"blue",
-        borderWidth:5,
-    },
-    content: {
-        borderColor:"green",
-        borderWidth:5,
+    contentContainer: {
+        flexGrow: 1,
+        paddingBottom: 20,
+        justifyContent: "center",
+        alignItems: "center",
     },
     contentIn: {
-        marginHorizontal: "auto",
         width:"80%",
-        borderColor:"purple",
-        borderWidth:5
     },
     containerNome: {
 
