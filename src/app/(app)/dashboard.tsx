@@ -1,15 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { PokemonClient } from "pokenode-ts";
 
-import { View, Text, StyleSheet, Platform } from "react-native";
-import { Button } from "@/components/button";
+import { View, Text, StyleSheet, Platform, Image, Animated } from "react-native";
 import { List } from "@/components/list";
-import { Image } from "react-native";
 
-import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/card";
 import { PokeType } from "@/components/poketype";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
+import { CustomHeader } from "@/components/header";
 
 type PokemonCard = {
   id: number;
@@ -18,9 +16,55 @@ type PokemonCard = {
   types: PokeTypes[];
 };
 
+// 1. Increased skeleton count to 12
+const SKELETON_DATA: PokemonCard[] = Array.from({ length: 12 }, (_, i) => ({
+  id: i,
+  name: "",
+  sprite: "",
+  types: [],
+}));
+
+// 2. Extracted Skeleton into its own component to handle the animation lifecycle
+const SkeletonCard = () => {
+  // Initialize opacity at 0.5
+  const fadeAnim = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    // Loop a sequence that pulses opacity from 0.5 up to 1, then back down
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0.5,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [fadeAnim]);
+
+  return (
+    // Wrap the card in Animated.View to apply the pulsing opacity
+    <Animated.View style={[styles.card, styles.skeletonCard, { opacity: fadeAnim }]}>
+      <View style={[styles.cardImage, styles.skeletonPlaceholder]} />
+      <View style={styles.cardContent}>
+        <View style={[styles.skeletonLine, { width: 120, height: 24 }]} />
+        <View style={[styles.skeletonLine, { width: 50, height: 16 }]} />
+        <View style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+          <View style={[styles.skeletonLine, { width: 70, height: 24, borderRadius: 8 }]} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
   const [pokemon, setPokemon] = useState<PokemonCard[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isActive = true;
@@ -31,25 +75,32 @@ export default function Dashboard() {
     }
 
     const loadPokemon = async () => {
-      const api = new PokemonClient();
-      const list = await api.listPokemons(0, 150);
-      const details = await Promise.all(list.results.map(({ name }) => api.getPokemonByName(name)));
+      try {
+        setIsLoading(true);
+        const api = new PokemonClient();
+        const list = await api.listPokemons(0, 150);
+        const details = await Promise.all(list.results.map(({ name }) => api.getPokemonByName(name)));
 
-      if (!isActive) {
-        return;
+        if (!isActive) return;
+
+        setPokemon(
+          details.map((item) => ({
+            id: item.id,
+            name: item.name,
+            sprite: item.sprites.other?.["official-artwork"].front_default ?? item.sprites.front_default ?? "",
+            types: item.types.map((type) => type.type.name as PokeTypes),
+          })),
+        );
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
       }
-
-      setPokemon(
-        details.map((item) => ({
-          id: item.id,
-          name: item.name,
-          sprite: item.sprites.other?.["official-artwork"].front_default ?? item.sprites.front_default ?? "",
-          types: item.types.map((type) => type.type.name as PokeTypes),
-        })),
-      );
     };
 
-    loadPokemon().catch((error) => console.error(error));
+    loadPokemon();
 
     return () => {
       isActive = false;
@@ -62,32 +113,36 @@ export default function Dashboard() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Bem-vindo, {user}</Text>
-        <Button title="Sair do APP" onPress={signOut} style={{ width: 120 }} />
-      </View>
+      <CustomHeader />
       <List
-        data={pokemon}
+        data={isLoading ? SKELETON_DATA : pokemon}
         onLoadMore={() => {}}
         listStyle={styles.list}
-        renderItemContent={(item) => (
-          <Card
-            style={[
-              styles.card,
-              { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color },
-            ]}>
-            <Image style={styles.cardImage} source={{ uri: item.sprite }} />
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
-              <View style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {item.types.map((type: PokeTypes) => (
-                  <PokeType key={type} type={type} />
-                ))}
+        renderItemContent={(item) => {
+          // 3. Render the new Animated Skeleton Component
+          if (isLoading) {
+            return <SkeletonCard />;
+          }
+
+          return (
+            <Card
+              style={[
+                styles.card,
+                { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color },
+              ]}>
+              <Image style={styles.cardImage} source={{ uri: item.sprite }} />
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{item.name}</Text>
+                <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
+                <View style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {item.types.map((type: PokeTypes) => (
+                    <PokeType key={type} type={type} />
+                  ))}
+                </View>
               </View>
-            </View>
-          </Card>
-        )}
+            </Card>
+          );
+        }}
       />
     </View>
   );
@@ -111,13 +166,6 @@ export const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
-  },
-  header: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    alignItems: "center",
   },
   card: {
     display: "flex",
@@ -151,5 +199,17 @@ export const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 18,
+  },
+  skeletonCard: {
+    borderColor: "#E1E9EE",
+    backgroundColor: "#F5F7F8",
+  },
+  skeletonPlaceholder: {
+    backgroundColor: "#E1E9EE",
+    borderRadius: 8,
+  },
+  skeletonLine: {
+    backgroundColor: "#E1E9EE",
+    borderRadius: 4,
   },
 });
