@@ -1,13 +1,13 @@
-import { useEffect, useState, useRef } from "react";
 import { PokemonClient } from "pokenode-ts";
+import { useEffect, useRef, useState } from "react";
 
-import { View, Text, StyleSheet, Platform, Image, Animated } from "react-native";
 import { List } from "@/components/list";
+import { Animated, Image, Platform, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/card";
+import { CustomHeader } from "@/components/header";
 import { PokeType } from "@/components/poketype";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
-import { CustomHeader } from "@/components/header";
 
 type PokemonCard = {
   id: number;
@@ -43,7 +43,7 @@ const SkeletonCard = () => {
           duration: 800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, [fadeAnim]);
 
@@ -134,7 +134,7 @@ export default function Dashboard() {
                 <Image style={styles.cardImage} source={{ uri: item.sprite }} resizeMode="contain" />
               </View>
               <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
+                <Text style={styles.cardTitle}>{item.name.charAt(0).toUpperCase() + item.name.slice(1)}</Text>
                 <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
                 <View style={styles.typesContainer}>
                   {item.types.map((type: PokeTypes) => (
