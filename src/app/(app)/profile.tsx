@@ -1,7 +1,7 @@
 import { CardPartida } from "@/components/cardPartida";
 import { CustomHeader } from "@/components/header";
 import { useAuth } from "@/context/AuthContext";
-import { View, Text, Image, StyleSheet, Platform } from "react-native";
+import { View, Text, Image, StyleSheet, Platform, ScrollView } from "react-native";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -9,7 +9,7 @@ export default function Profile() {
   return (
     <View style={styles.container}>
       <CustomHeader />
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.containerNome}>
           <Image
             source={{
@@ -47,7 +47,7 @@ export default function Profile() {
             />
           </View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

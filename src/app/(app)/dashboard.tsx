@@ -177,7 +177,11 @@ export const styles = StyleSheet.create({
   card: {
     display: "flex",
     flexDirection: "row",
-    width: 380,
+    width: Platform.select({
+      web: 380,
+      default: 320,
+    }),
+    maxWidth: 380,
     minHeight: 140,
     paddingBlock: 6,
     paddingInline: 18,

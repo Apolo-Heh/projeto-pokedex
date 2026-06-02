@@ -101,7 +101,7 @@ export function CardPartida({ dataPartida, vitoria, time, timeInimigo, style, ..
   }, [time, timeInimigo]);
 
   return (
-    <View style={[styles.card, style]} {...rest}>
+    <View style={[styles.card, { borderColor: vitoria ? styles.winBorder.borderColor : styles.lossBorder.borderColor }, style]} {...rest}>
       <View style={styles.header}>
         <View>
           <Text style={styles.dateText}>{dataFormatada}</Text>

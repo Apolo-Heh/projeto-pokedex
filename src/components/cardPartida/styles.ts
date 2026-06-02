@@ -38,8 +38,14 @@ export const styles = StyleSheet.create({
   winBadge: {
     backgroundColor: "#268d2b",
   },
+  winBorder: {
+    borderColor: "#268d2b",
+  },
   lossBadge: {
     backgroundColor: "#eb3f3f",
+  },
+  lossBorder: {
+    borderColor: "#eb3f3f",
   },
   resultText: {
     fontSize: 13,
