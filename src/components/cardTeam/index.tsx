@@ -1,5 +1,5 @@
 import { Card } from "@/components/card";
-import { PokeTypes } from "@/constants/pokeTypes";
+import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
 import { Pencil, Trash2 } from "lucide-react-native";
 import { Image, Pressable, Text, View } from "react-native";
 import { styles } from "./styles";
@@ -52,7 +52,14 @@ export function CardTeam({ team, pokemonCatalog, onEdit, onDelete }: CardTeamPro
       <View style={styles.teamGrid}>
         {slots.map((pokemon, index) =>
           pokemon ? (
-            <View key={`${team.id}-${pokemon.id}-${index}`} style={[styles.pokemonSlot, styles.filledSlot]}>
+            <View
+              key={`${team.id}-${pokemon.id}-${index}`}
+              style={[
+                styles.pokemonSlot,
+                styles.filledSlot,
+                { borderColor: PokeTypeStyles[pokemon.type].color },
+              ]}
+            >
               <Image source={{ uri: pokemon.sprite }} style={styles.pokemonImage} resizeMode="contain" />
               <Text numberOfLines={1} style={styles.pokemonName}>
                 {pokemon.name}

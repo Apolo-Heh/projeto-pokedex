@@ -8,7 +8,7 @@ import { Input } from "@/components/input";
 import { Card } from "@/components/card";
 import { Alert } from "@/components/alert";
 
-export default function Index() {
+export default function signIn() {
   const [name, setName] = useState<string>("");
   const [senha, setSenha] = useState<string>("");
 
@@ -43,10 +43,10 @@ export default function Index() {
     <View style={styles.container}>
       <Card style={styles.card}>
         <Image source={require("@assets/images/pokebola.png")} style={{ width: 200, height: 200 }} />
-        <Text style={styles.title}>Login</Text>
+        <Text style={styles.title}>Cadastro</Text>
         <Input placeholder="Usuario" onChangeText={setName} />
         <Input placeholder="Senha" secureTextEntry onChangeText={setSenha} />
-        <Pressable onPress={() => router.push("/signIn")}>
+        <Pressable onPress={() => router.push("/")}>
           <Text style={{ color: "#0000ff", fontSize: 14, fontWeight: "bold" }}>Não possui uma conta? Cadastre-se.</Text>
         </Pressable>
         <Button title="Enviar" onPress={validateCredentials}/>

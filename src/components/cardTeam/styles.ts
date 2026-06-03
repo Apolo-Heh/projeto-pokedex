@@ -2,16 +2,25 @@ import { Platform, StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   card: {
-    gap: 14,
+    gap: Platform.select({
+      web: 10,
+      default: 14,
+    }),
   },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: Platform.select({
+      web: "center",
+      default: "flex-start",
+    }),
     justifyContent: "space-between",
     gap: 12,
   },
   title: {
-    fontSize: 20,
+    fontSize: Platform.select({
+      web: 22,
+      default: 20,
+    }),
     fontWeight: Platform.select({
       android: "900",
       default: "800",
@@ -20,7 +29,10 @@ export const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 2,
-    fontSize: 13,
+    fontSize: Platform.select({
+      web: 14,
+      default: 13,
+    }),
     color: "#6b7280",
     fontWeight: "600",
   },
@@ -46,11 +58,24 @@ export const styles = StyleSheet.create({
   teamGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    justifyContent: Platform.select({
+      web: "space-evenly",
+      default: "space-between",
+    }),
+    gap: Platform.select({
+      web: 8,
+      default: 10,
+    }),
   },
   pokemonSlot: {
-    width: "18%",
-    minWidth: 58,
+    width: Platform.select({
+      web: "16%",
+      default: "18%",
+    }),
+    minWidth: Platform.select({
+      web: 126,
+      default: 58,
+    }),
     aspectRatio: 1,
     borderRadius: 14,
     alignItems: "center",
@@ -61,7 +86,10 @@ export const styles = StyleSheet.create({
   filledSlot: {
     backgroundColor: "#f8fafc",
     borderColor: "#e5e7eb",
-    padding: 6,
+    padding: Platform.select({
+      web: 6,
+      default: 6,
+    }),
   },
   emptySlot: {
     backgroundColor: "#f9fafb",
@@ -69,19 +97,40 @@ export const styles = StyleSheet.create({
     borderColor: "#d1d5db",
   },
   pokemonImage: {
-    width: 34,
-    height: 34,
+    width: "48%",
+    height: "48%",
+    minWidth: Platform.select({
+      web: 40,
+      default: 34,
+    }),
+    minHeight: Platform.select({
+      web: 40,
+      default: 34,
+    }),
   },
   pokemonName: {
-    marginTop: 4,
-    fontSize: 10,
+    marginTop: Platform.select({
+      web: 3,
+      default: 4,
+    }),
+    fontSize: Platform.select({
+      web: 13,
+      default: 10,
+    }),
+    lineHeight: Platform.select({
+      web: 15,
+      default: 12,
+    }),
     textAlign: "center",
     color: "#4b5563",
     fontWeight: "700",
     textTransform: "capitalize",
   },
   emptySlotText: {
-    fontSize: 11,
+    fontSize: Platform.select({
+      web: 12,
+      default: 11,
+    }),
     fontWeight: "700",
     color: "#9ca3af",
   },
