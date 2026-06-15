@@ -1,19 +1,29 @@
 import { PokemonClient } from "pokenode-ts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { List } from "@/components/list";
-import { Animated, Image, Platform, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/card";
 import { CustomHeader } from "@/components/header";
 import { PokeType } from "@/components/poketype";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
+import { Alert } from "@/components/alert";
+import { useAuth } from "@/context/AuthContext";
+import { capturePokemon, loadCapturedPokemons, removeCapturedPokemon } from "../../services/capturedPokemon";
+import { Plus, Trash2 } from "lucide-react-native";
 
 type PokemonCard = {
   id: number;
   name: string;
   sprite: string;
   types: PokeTypes[];
+};
+
+type CaptureAlertState = {
+  title: string;
+  message: string;
+  type: "success" | "error" | "warning" | "info";
 };
 
 // 1. Increased skeleton count to 50
@@ -65,6 +75,46 @@ const SkeletonCard = () => {
 export default function Dashboard() {
   const [pokemon, setPokemon] = useState<PokemonCard[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [capturedPokemonIds, setCapturedPokemonIds] = useState<number[]>([]);
+  const [isMutatingPokemonId, setIsMutatingPokemonId] = useState<number | null>(null);
+  const [isAlertVisible, setIsAlertVisible] = useState(false);
+  const [alertData, setAlertData] = useState<CaptureAlertState>({
+    title: "",
+    message: "",
+    type: "success",
+  });
+  const { userId } = useAuth();
+
+  const capturedPokemonSet = useMemo(() => new Set(capturedPokemonIds), [capturedPokemonIds]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadCaptured = async () => {
+      if (!userId) {
+        setCapturedPokemonIds([]);
+        return;
+      }
+
+      try {
+        const capturedPokemons = await loadCapturedPokemons(userId);
+
+        if (!isActive) {
+          return;
+        }
+
+        setCapturedPokemonIds(capturedPokemons.map((capturedPokemon) => capturedPokemon.id));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadCaptured();
+
+    return () => {
+      isActive = false;
+    };
+  }, [userId]);
 
   useEffect(() => {
     let isActive = true;
@@ -111,6 +161,56 @@ export default function Dashboard() {
     };
   }, []);
 
+  const handleCaptureToggle = async (item: PokemonCard) => {
+    if (!userId) {
+      setAlertData({
+        title: "Sessão inválida",
+        message: "Faça login novamente para capturar pokémon.",
+        type: "error",
+      });
+      setIsAlertVisible(true);
+      return;
+    }
+
+    try {
+      setIsMutatingPokemonId(item.id);
+
+      if (capturedPokemonSet.has(item.id)) {
+        const nextCapturedPokemons = await removeCapturedPokemon(userId, item.id);
+        setCapturedPokemonIds(nextCapturedPokemons.map((capturedPokemon) => capturedPokemon.id));
+        setAlertData({
+          title: "Pokémon removido",
+          message: `${item.name.charAt(0).toUpperCase() + item.name.slice(1)} foi removido dos capturados.`,
+          type: "success",
+        });
+      } else {
+        const nextCapturedPokemons = await capturePokemon(userId, {
+          id: item.id,
+          name: item.name,
+          sprite: item.sprite,
+          type: item.types[0] ?? PokeTypes.Normal,
+        });
+        setCapturedPokemonIds(nextCapturedPokemons.map((capturedPokemon) => capturedPokemon.id));
+        setAlertData({
+          title: "Pokémon capturado",
+          message: `${item.name.charAt(0).toUpperCase() + item.name.slice(1)} foi capturado com sucesso.`,
+          type: "success",
+        });
+      }
+
+      setIsAlertVisible(true);
+    } catch (error) {
+      setAlertData({
+        title: "Erro",
+        message: error instanceof Error ? error.message : "Não foi possível atualizar a captura.",
+        type: "error",
+      });
+      setIsAlertVisible(true);
+    } finally {
+      setIsMutatingPokemonId(null);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <CustomHeader />
@@ -124,27 +224,62 @@ export default function Dashboard() {
             return <SkeletonCard />;
           }
 
+          const isCaptured = capturedPokemonSet.has(item.id);
+
           return (
-            <Card
-              style={[
-                styles.card,
-                { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color },
-              ]}>
-              <View style={styles.cardImageContainer}>
-                <Image style={styles.cardImage} source={{ uri: item.sprite }} resizeMode="contain" />
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.name.charAt(0).toUpperCase() + item.name.slice(1)}</Text>
-                <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
-                <View style={styles.typesContainer}>
-                  {item.types.map((type: PokeTypes) => (
-                    <PokeType key={type} type={type} />
-                  ))}
+            <View style={styles.cardWrapper}>
+              <Card
+                style={[
+                  styles.card,
+                  { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color },
+                  isCaptured && styles.cardCaptured,
+                ]}>
+                <View style={styles.cardImageContainer}>
+                  <Image style={styles.cardImage} source={{ uri: item.sprite }} resizeMode="contain" />
                 </View>
-              </View>
-            </Card>
+                <View style={styles.cardContent}>
+                  <View style={styles.cardHeaderRow}>
+                    <View>
+                      <Text style={styles.cardTitle}>{item.name.charAt(0).toUpperCase() + item.name.slice(1)}</Text>
+                      <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
+                    </View>
+
+                    <View style={[styles.captureBadge, isCaptured ? styles.captureBadgeActive : styles.captureBadgeInactive]}>
+                      <Text style={[styles.captureBadgeText, isCaptured ? styles.captureBadgeTextActive : styles.captureBadgeTextInactive]}>
+                        {isCaptured ? "Capturado" : "Livre"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.typesContainer}>
+                    {item.types.map((type: PokeTypes) => (
+                      <PokeType key={type} type={type} />
+                    ))}
+                  </View>
+                </View>
+              </Card>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={isMutatingPokemonId === item.id}
+                onPress={() => handleCaptureToggle(item)}
+                style={[styles.captureButton, isCaptured ? styles.removeButton : styles.addButton]}>
+                {isCaptured ? <Trash2 size={16} color="#fff" strokeWidth={2.5} /> : <Plus size={16} color="#fff" strokeWidth={2.5} />}
+                <Text style={styles.captureButtonText}>
+                  {isMutatingPokemonId === item.id ? "Processando..." : isCaptured ? "Remover capturado" : "Capturar"}
+                </Text>
+              </Pressable>
+            </View>
           );
         }}
+      />
+
+      <Alert
+        title={alertData.title}
+        message={alertData.message}
+        type={alertData.type}
+        visible={isAlertVisible}
+        onClose={() => setIsAlertVisible(false)}
       />
     </View>
   );
@@ -174,6 +309,13 @@ export const styles = StyleSheet.create({
     gap: 16,
     flexGrow: 1,
   },
+  cardWrapper: {
+    gap: 10,
+    width: Platform.select({
+      web: 380,
+      default: 320,
+    }),
+  },
   card: {
     display: "flex",
     flexDirection: "row",
@@ -188,6 +330,15 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     overflow: "hidden",
+  },
+  cardCaptured: {
+    backgroundColor: "#fffaf0",
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
   },
   cardTitle: {
     fontSize: 20,
@@ -225,6 +376,48 @@ export const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 8,
     height: 56,
+  },
+  captureBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  captureBadgeActive: {
+    backgroundColor: "#dcfce7",
+  },
+  captureBadgeInactive: {
+    backgroundColor: "#e2e8f0",
+  },
+  captureBadgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  captureBadgeTextActive: {
+    color: "#166534",
+  },
+  captureBadgeTextInactive: {
+    color: "#334155",
+  },
+  captureButton: {
+    height: 46,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  addButton: {
+    backgroundColor: "#16a34a",
+  },
+  removeButton: {
+    backgroundColor: "#dc2626",
+  },
+  captureButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "800",
   },
   skeletonCard: {
     borderColor: "#E1E9EE",

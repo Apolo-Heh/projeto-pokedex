@@ -3,7 +3,6 @@ import { Button } from "@/components/button";
 import { CardTeam, TeamCardData, TeamPokemon } from "@/components/cardTeam";
 import { CustomHeader } from "@/components/header";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
-import { PokemonClient } from "pokenode-ts";
 import { Check, ChevronDown, Plus, Search, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -17,6 +16,8 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { useAuth } from "@/context/AuthContext";
+import { loadCapturedPokemons } from "../../services/capturedPokemon";
 
 const STORAGE_KEY = "@pokedex:teams";
 const MAX_TEAM_SIZE = 5;
@@ -26,6 +27,7 @@ type StoredTeam = TeamCardData & {
 };
 
 export default function Team() {
+    const { userId } = useAuth();
     const [pokemonCatalog, setPokemonCatalog] = useState<TeamPokemon[]>([]);
     const [teams, setTeams] = useState<StoredTeam[]>([]);
     const [isCatalogLoading, setIsCatalogLoading] = useState(true);
@@ -95,20 +97,29 @@ export default function Team() {
         const loadPokemonCatalog = async () => {
             try {
                 setIsCatalogLoading(true);
-                const api = new PokemonClient();
-                const list = await api.listPokemons(0, 150);
-                const details = await Promise.all(list.results.map(({ name }) => api.getPokemonByName(name)));
+                if (!userId) {
+                    if (isActive) {
+                        setPokemonCatalog([]);
+                    }
+                    return;
+                }
+
+                if (!isActive) {
+                    return;
+                }
+
+                const capturedPokemons = await loadCapturedPokemons(userId);
 
                 if (!isActive) {
                     return;
                 }
 
                 setPokemonCatalog(
-                    details.map((pokemon) => ({
+                    capturedPokemons.map((pokemon) => ({
                         id: pokemon.id,
                         name: pokemon.name,
-                        sprite: pokemon.sprites.other?.["official-artwork"].front_default ?? pokemon.sprites.front_default ?? "",
-                        type: (pokemon.types[0]?.type.name ?? PokeTypes.Normal) as PokeTypes,
+                        sprite: pokemon.sprite,
+                        type: pokemon.type,
                     })),
                 );
             } catch (error) {
@@ -125,7 +136,7 @@ export default function Team() {
         return () => {
             isActive = false;
         };
-    }, []);
+    }, [userId]);
 
     const filteredPokemon = useMemo(() => {
         const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -247,7 +258,7 @@ export default function Team() {
                         <View style={styles.headerCopy}>
                             <Text style={styles.pageTitle}>Times</Text>
                             <Text style={styles.pageSubtitle}>
-                                Monte, salve e edite times com até 5 pokémon. Os dados ficam armazenados no dispositivo.
+                                Monte, salve e edite times com até 5 pokémon capturados. Os dados ficam armazenados no dispositivo.
                             </Text>
                         </View>
 
@@ -256,9 +267,9 @@ export default function Team() {
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
-                        <Text style={styles.emptyTitle}>{isCatalogLoading ? "Carregando catálogo..." : "Nenhum time criado ainda"}</Text>
+                        <Text style={styles.emptyTitle}>{isCatalogLoading ? "Carregando capturados..." : "Nenhum time criado ainda"}</Text>
                         <Text style={styles.emptyText}>
-                            Use o botão acima para criar um time e selecionar os pokémon em uma lista com miniaturas.
+                            Use o botão acima para criar um time e selecionar apenas os pokémon que você já capturou.
                         </Text>
                     </View>
                 }
@@ -278,7 +289,7 @@ export default function Team() {
                         <View style={styles.modalHeader}>
                             <View>
                                 <Text style={styles.modalTitle}>{editingTeamId ? "Editar time" : "Novo time"}</Text>
-                                <Text style={styles.modalSubtitle}>Escolha um nome e até 5 pokémon.</Text>
+                                <Text style={styles.modalSubtitle}>Escolha um nome e até 5 pokémon capturados.</Text>
                             </View>
 
                             <Pressable accessibilityRole="button" onPress={closeTeamModal} style={styles.closeButton}>
@@ -336,7 +347,7 @@ export default function Team() {
                         <View style={styles.modalHeader}>
                             <View>
                                 <Text style={styles.modalTitle}>Selecionar pokémon</Text>
-                                <Text style={styles.modalSubtitle}>Toque em um item para adicioná-lo ao time.</Text>
+                                <Text style={styles.modalSubtitle}>Toque em um item capturado para adicioná-lo ao time.</Text>
                             </View>
 
                             <Pressable accessibilityRole="button" onPress={() => setPickerVisible(false)} style={styles.closeButton}>
@@ -360,7 +371,11 @@ export default function Team() {
                             keyExtractor={(item) => String(item.id)}
                             keyboardShouldPersistTaps="handled"
                             contentContainerStyle={styles.pickerListContent}
-                            ListEmptyComponent={<Text style={styles.emptyPicker}>Nenhum pokémon encontrado.</Text>}
+                            ListEmptyComponent={
+                                <Text style={styles.emptyPicker}>
+                                    {isCatalogLoading ? "Carregando pokémon capturados..." : "Nenhum pokémon capturado encontrado."}
+                                </Text>
+                            }
                             renderItem={({ item }) => {
                                 const isSelected = selectedPokemonIds.includes(item.id);
 

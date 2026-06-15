@@ -4,6 +4,7 @@ import { CardPartida } from "@/components/cardPartida";
 import { Card } from "@/components/card";
 import { CustomHeader } from "@/components/header";
 import { useAuth } from "@/context/AuthContext";
+import { loadCapturedPokemons } from "../../services/capturedPokemon";
 import { View, Text, Image, StyleSheet, Platform, ScrollView, Pressable, LayoutChangeEvent, TextInput } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { Search } from "lucide-react-native";
@@ -122,7 +123,7 @@ function TabItem({
 }
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, userId } = useAuth();
   const [tab, setTab] = useState<"partidas" | "capturados" | "conta">("partidas");
   const [tabWidths, setTabWidths] = useState<number[]>([0, 0, 0]);
   const [tabPositions, setTabPositions] = useState<number[]>([0, 0, 0]);
@@ -132,7 +133,6 @@ export default function Profile() {
   const [searchText, setSearchText] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isCapturedLoading, setIsCapturedLoading] = useState(false);
-  const [hasLoadedCaptured, setHasLoadedCaptured] = useState(false);
 
   const tabOrder = ["partidas", "capturados", "conta"];
   const currentTabIndex = tabOrder.indexOf(tab);
@@ -162,41 +162,37 @@ export default function Profile() {
   }, [currentTabIndex, tabPositions]);
 
   useEffect(() => {
-    if (tab !== "capturados" || hasLoadedCaptured) {
+    if (tab !== "capturados") {
       return;
     }
 
     let isActive = true;
 
-    const loadCapturedPokemons = async () => {
+    const loadCapturedPokemonsForProfile = async () => {
       try {
         setIsCapturedLoading(true);
 
-        const api = new PokemonClient();
-        const list = await api.listPokemons(0, 150);
-        const shuffledResults = [...list.results];
-
-        for (let index = shuffledResults.length - 1; index > 0; index -= 1) {
-          const randomIndex = Math.floor(Math.random() * (index + 1));
-          [shuffledResults[index], shuffledResults[randomIndex]] = [shuffledResults[randomIndex], shuffledResults[index]];
+        if (!userId) {
+          if (isActive) {
+            setCapturedPokemons([]);
+          }
+          return;
         }
 
-        const selectedResults = shuffledResults.slice(0, 5);
-        const details = await Promise.all(selectedResults.map(({ name }) => api.getPokemonByName(name)));
+        const capturedPokemonsData = await loadCapturedPokemons(userId);
 
         if (!isActive) {
           return;
         }
 
         setCapturedPokemons(
-          details.map((item) => ({
-            id: item.id,
-            name: item.name,
-            sprite: item.sprites.other?.["official-artwork"].front_default ?? item.sprites.front_default ?? "",
-            types: item.types.map((type) => type.type.name as PokeTypes),
+          capturedPokemonsData.map((pokemon) => ({
+            id: pokemon.id,
+            name: pokemon.name,
+            sprite: pokemon.sprite,
+            types: [pokemon.type],
           })),
         );
-        setHasLoadedCaptured(true);
       } catch (error) {
         console.error(error);
       } finally {
@@ -206,12 +202,12 @@ export default function Profile() {
       }
     };
 
-    loadCapturedPokemons();
+    loadCapturedPokemonsForProfile();
 
     return () => {
       isActive = false;
     };
-  }, [tab, hasLoadedCaptured]);
+  }, [tab, userId]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: animatedX.value }],
@@ -368,7 +364,9 @@ export default function Profile() {
                   ))}
                 </View>
               ) : (
-                <Text style={styles.emptyStateText}>Nenhum pokémon encontrado para essa busca.</Text>
+                <Text style={styles.emptyStateText}>
+                  {searchText.trim() ? "Nenhum pokémon encontrado para essa busca." : "Nenhum pokémon capturado ainda."}
+                </Text>
               )}
             </View>
           )}

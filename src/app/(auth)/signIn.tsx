@@ -1,4 +1,4 @@
-import { use, useState } from "react";
+import { useState } from "react";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 
@@ -7,10 +7,12 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card } from "@/components/card";
 import { Alert } from "@/components/alert";
+import { register } from "../../services/authApi";
 
 export default function signIn() {
   const [name, setName] = useState<string>("");
   const [senha, setSenha] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertData, setAlertData] = useState({
@@ -21,21 +23,37 @@ export default function signIn() {
 
   const { signIn } = useAuth();
 
-  function validateCredentials() {
-    if ((name.toLowerCase() === "lucas" && senha === "123") || (name.toLowerCase() === "admin" && senha === "admin")) {
-      signIn(name);
+  async function validateCredentials() {
+    const username = name.trim();
 
-      router.push({
-        pathname: "/dashboard",
-        params: { username: name.toLowerCase() },
-      });
-    } else {
+    if (!username || !senha) {
       setAlertData({
-        title: "Erro de Login",
-        message: "Credenciais inválidas. Tente novamente.",
+        title: "Campos obrigatórios",
+        message: "Informe usuário e senha para continuar.",
         type: "error",
       });
       setIsAlertVisible(true);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await register({ username, password: senha });
+      const responseUsername = (response.username as string | undefined) ?? username;
+      const responseUserId = (response.userId as string | undefined) ?? (response.user_id as string | undefined) ?? (response.id as string | undefined) ?? null;
+
+      await signIn(responseUsername, responseUserId);
+
+      router.replace("/dashboard");
+    } catch (error) {
+      setAlertData({
+        title: "Erro de Cadastro",
+        message: error instanceof Error ? error.message : "Não foi possível criar a conta.",
+        type: "error",
+      });
+      setIsAlertVisible(true);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -47,9 +65,9 @@ export default function signIn() {
         <Input placeholder="Usuario" onChangeText={setName} />
         <Input placeholder="Senha" secureTextEntry onChangeText={setSenha} />
         <Pressable onPress={() => router.push("/")}>
-          <Text style={{ color: "#0000ff", fontSize: 14, fontWeight: "bold" }}>Não possui uma conta? Cadastre-se.</Text>
+          <Text style={{ color: "#0000ff", fontSize: 14, fontWeight: "bold" }}>Já possui uma conta? Faça login.</Text>
         </Pressable>
-        <Button title="Enviar" onPress={validateCredentials}/>
+        <Button title={isSubmitting ? "Cadastrando..." : "Enviar"} onPress={validateCredentials} disabled={isSubmitting} />
       </Card>
 
       <Alert
@@ -83,6 +101,6 @@ const styles = StyleSheet.create({
     fontSize: 48,
     padding: 16,
     fontWeight: "bold",
-    marginBlock: 12,
+    marginVertical: 12,
   },
 });

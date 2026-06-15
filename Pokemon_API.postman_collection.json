@@ -1,0 +1,317 @@
+{
+  "info": {
+    "_postman_id": "4447cae4-469e-4428-b6bc-8999e74cc2ed",
+    "name": "Pokemon API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "349581"
+  },
+  "item": [
+    {
+      "name": "Registrar",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"kleber\",\n    \"password\": \"Senha@Senha\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/auth/v1/register",
+          "protocol": "https",
+          "host": [
+            "lnh1dhp1mj",
+            "execute-api",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "api-pokemon",
+            "auth",
+            "v1",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"kleber\",\n    \"password\": \"Senha@Senha\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/auth/v1/login",
+          "protocol": "https",
+          "host": [
+            "lnh1dhp1mj",
+            "execute-api",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "api-pokemon",
+            "auth",
+            "v1",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Retornar Perfil",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/auth/v1/stats/65888ffb-ed2a-4446-89c7-31723970c612",
+          "protocol": "https",
+          "host": [
+            "lnh1dhp1mj",
+            "execute-api",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "api-pokemon",
+            "auth",
+            "v1",
+            "stats",
+            "65888ffb-ed2a-4446-89c7-31723970c612"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Atualizar Perfil",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"level\": \"1\",\n    \"vitorias\": \"1\",\n    \"derrotas\": \"0\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/auth/v1/stats/65888ffb-ed2a-4446-89c7-31723970c612",
+          "protocol": "https",
+          "host": [
+            "lnh1dhp1mj",
+            "execute-api",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "api-pokemon",
+            "auth",
+            "v1",
+            "stats",
+            "65888ffb-ed2a-4446-89c7-31723970c612"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Retornar Time",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/pokemon/v1/team?user-id=65888ffb-ed2a-4446-89c7-31723970c612",
+          "protocol": "https",
+          "host": [
+            "lnh1dhp1mj",
+            "execute-api",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "api-pokemon",
+            "pokemon",
+            "v1",
+            "team"
+          ],
+          "query": [
+            {
+              "key": "user-id",
+              "value": "65888ffb-ed2a-4446-89c7-31723970c612"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Atualizar Time",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "localhost:8080/api-pokemon/pokemon/v1/team?user-id=d1a89d64-8298-4999-9011-00bbe3b2c415&removed-pokemon=29&new-pokemon=100",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api-pokemon",
+            "pokemon",
+            "v1",
+            "team"
+          ],
+          "query": [
+            {
+              "key": "user-id",
+              "value": "d1a89d64-8298-4999-9011-00bbe3b2c415"
+            },
+            {
+              "key": "removed-pokemon",
+              "value": "29"
+            },
+            {
+              "key": "new-pokemon",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Adicionar Pokemon Capturado",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/pokemon/v1/captured?user-id=65888ffb-ed2a-4446-89c7-31723970c61&pokemon-id=100",
+          "protocol": "https",
+          "host": [
+            "lnh1dhp1mj",
+            "execute-api",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "api-pokemon",
+            "pokemon",
+            "v1",
+            "captured"
+          ],
+          "query": [
+            {
+              "key": "user-id",
+              "value": "65888ffb-ed2a-4446-89c7-31723970c61"
+            },
+            {
+              "key": "pokemon-id",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Deletar Pokemon Capturado",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/pokemon/v1/captured?user-id=65888ffb-ed2a-4446-89c7-31723970c612&pokemon-id=100",
+          "protocol": "https",
+          "host": [
+            "lnh1dhp1mj",
+            "execute-api",
+            "us-east-1",
+            "amazonaws",
+            "com"
+          ],
+          "path": [
+            "api-pokemon",
+            "pokemon",
+            "v1",
+            "captured"
+          ],
+          "query": [
+            {
+              "key": "user-id",
+              "value": "65888ffb-ed2a-4446-89c7-31723970c612"
+            },
+            {
+              "key": "pokemon-id",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
