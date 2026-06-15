@@ -5,7 +5,17 @@ import { Card } from "@/components/card";
 import { CustomHeader } from "@/components/header";
 import { useAuth } from "@/context/AuthContext";
 import { loadCapturedPokemons } from "../../services/capturedPokemon";
-import { View, Text, Image, StyleSheet, Platform, ScrollView, Pressable, LayoutChangeEvent, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Platform,
+  ScrollView,
+  Pressable,
+  LayoutChangeEvent,
+  TextInput,
+} from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { Search } from "lucide-react-native";
 import Animated, {
@@ -63,12 +73,7 @@ function AccountIcon({ color }: TabIconProps) {
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
       <Circle cx="12" cy="8" r="3.5" stroke={color} strokeWidth={2} />
-      <Path
-        d="M5.5 19c1.7-3 4-4.5 6.5-4.5S16.3 16 18.5 19"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
+      <Path d="M5.5 19c1.7-3 4-4.5 6.5-4.5S16.3 16 18.5 19" stroke={color} strokeWidth={2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -87,11 +92,7 @@ function TabIcon({ index, isActive }: { index: number; isActive: boolean }) {
 
 function TabLabel({ index, activeIndex, children }: TabLabelProps) {
   const animatedTextStyle = useAnimatedStyle(() => {
-    const color = interpolateColor(
-      activeIndex.value,
-      [index - 1, index, index + 1],
-      ["#333333", "#ffffff", "#333333"]
-    );
+    const color = interpolateColor(activeIndex.value, [index - 1, index, index + 1], ["#333333", "#ffffff", "#333333"]);
 
     return {
       color,
@@ -256,8 +257,7 @@ export default function Profile() {
             <Pressable
               style={[styles.tabButton, tab === "partidas" && styles.tabButtonActive]}
               onPress={() => setTab("partidas")}
-              onLayout={handleTabLayout(0)}
-            >
+              onLayout={handleTabLayout(0)}>
               <TabItem index={0} isActive={tab === "partidas"} activeIndex={animatedTabIndex}>
                 Partidas
               </TabItem>
@@ -265,8 +265,7 @@ export default function Profile() {
             <Pressable
               style={[styles.tabButton, tab === "capturados" && styles.tabButtonActive]}
               onPress={() => setTab("capturados")}
-              onLayout={handleTabLayout(1)}
-            >
+              onLayout={handleTabLayout(1)}>
               <TabItem index={1} isActive={tab === "capturados"} activeIndex={animatedTabIndex}>
                 Capturados
               </TabItem>
@@ -274,8 +273,7 @@ export default function Profile() {
             <Pressable
               style={[styles.tabButton, tab === "conta" && styles.tabButtonActive]}
               onPress={() => setTab("conta")}
-              onLayout={handleTabLayout(2)}
-            >
+              onLayout={handleTabLayout(2)}>
               <TabItem index={2} isActive={tab === "conta"} activeIndex={animatedTabIndex}>
                 Conta
               </TabItem>
@@ -284,7 +282,7 @@ export default function Profile() {
 
           {tab === "partidas" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto"}}>
+              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto" }}>
                 Histórico de partidas recentes
               </Text>
               <View style={styles.containerPartidas}>
@@ -315,7 +313,7 @@ export default function Profile() {
 
           {tab === "capturados" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto"}}>
+              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto" }}>
                 Pokémons capturados
               </Text>
               <View style={[styles.searchBox, isSearchFocused && styles.searchBoxFocused]}>
@@ -346,13 +344,14 @@ export default function Profile() {
                         {
                           borderColor: PokeTypeStyles[(pokemon.types[0] ?? PokeTypes.Normal) as PokeTypes].color,
                         },
-                      ]}
-                    >
+                      ]}>
                       <View style={styles.cardImageContainer}>
                         <Image style={styles.cardImage} source={{ uri: pokemon.sprite }} resizeMode="contain" />
                       </View>
                       <View style={styles.cardContent}>
-                        <Text style={styles.cardTitle}>{pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</Text>
+                        <Text style={styles.cardTitle}>
+                          {pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}
+                        </Text>
                         <Text style={styles.cardSubtitle}>Nº {pokemon.id}</Text>
                         <View style={styles.typesContainer}>
                           {pokemon.types.map((type) => (
@@ -373,7 +372,7 @@ export default function Profile() {
 
           {tab === "conta" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto"}}>
+              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto" }}>
                 Configurações e informações da conta
               </Text>
               <Text style={{ fontSize: 18, marginBottom: 8 }}>

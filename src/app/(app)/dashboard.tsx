@@ -244,8 +244,16 @@ export default function Dashboard() {
                       <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
                     </View>
 
-                    <View style={[styles.captureBadge, isCaptured ? styles.captureBadgeActive : styles.captureBadgeInactive]}>
-                      <Text style={[styles.captureBadgeText, isCaptured ? styles.captureBadgeTextActive : styles.captureBadgeTextInactive]}>
+                    <View
+                      style={[
+                        styles.captureBadge,
+                        isCaptured ? styles.captureBadgeActive : styles.captureBadgeInactive,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.captureBadgeText,
+                          isCaptured ? styles.captureBadgeTextActive : styles.captureBadgeTextInactive,
+                        ]}>
                         {isCaptured ? "Capturado" : "Livre"}
                       </Text>
                     </View>
@@ -264,7 +272,11 @@ export default function Dashboard() {
                 disabled={isMutatingPokemonId === item.id}
                 onPress={() => handleCaptureToggle(item)}
                 style={[styles.captureButton, isCaptured ? styles.removeButton : styles.addButton]}>
-                {isCaptured ? <Trash2 size={16} color="#fff" strokeWidth={2.5} /> : <Plus size={16} color="#fff" strokeWidth={2.5} />}
+                {isCaptured ? (
+                  <Trash2 size={16} color="#fff" strokeWidth={2.5} />
+                ) : (
+                  <Plus size={16} color="#fff" strokeWidth={2.5} />
+                )}
                 <Text style={styles.captureButtonText}>
                   {isMutatingPokemonId === item.id ? "Processando..." : isCaptured ? "Remover capturado" : "Capturar"}
                 </Text>

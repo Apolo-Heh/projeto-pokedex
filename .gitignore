@@ -6,6 +6,8 @@
 # dependencies
 node_modules/
 
+APIAWS.json
+
 # Expo
 .expo/
 dist/
