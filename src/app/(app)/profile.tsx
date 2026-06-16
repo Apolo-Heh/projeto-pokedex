@@ -1,10 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { PokemonClient } from "pokenode-ts";
-import { CardPartida } from "@/components/cardPartida";
-import { Card } from "@/components/card";
-import { CustomHeader } from "@/components/header";
-import { useAuth } from "@/context/AuthContext";
-import { loadCapturedPokemons } from "../../services/capturedPokemon";
 import {
   View,
   Text,
@@ -26,8 +20,17 @@ import Animated, {
   Easing,
   SharedValue,
 } from "react-native-reanimated";
+
+// Imports internos
+import { CardPartida } from "@/components/cardPartida";
+import { Card } from "@/components/card";
+import { CustomHeader } from "@/components/header";
+import { useAuth } from "@/context/AuthContext";
 import { PokeType } from "@/components/poketype";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
+
+// Service que criamos e ajustamos
+import { loadCapturedPokemons } from "../../services/capturedPokemon";
 
 type PokemonCard = {
   id: number;
@@ -93,10 +96,7 @@ function TabIcon({ index, isActive }: { index: number; isActive: boolean }) {
 function TabLabel({ index, activeIndex, children }: TabLabelProps) {
   const animatedTextStyle = useAnimatedStyle(() => {
     const color = interpolateColor(activeIndex.value, [index - 1, index, index + 1], ["#333333", "#ffffff", "#333333"]);
-
-    return {
-      color,
-    };
+    return { color };
   });
 
   return <Animated.Text style={[styles.tabText, animatedTextStyle]}>{children}</Animated.Text>;
@@ -180,22 +180,24 @@ export default function Profile() {
           return;
         }
 
+        // Faz o request usando o novo endpoint através do service atualizado
         const capturedPokemonsData = await loadCapturedPokemons(userId);
 
         if (!isActive) {
           return;
         }
 
+        // Mapeia o array normalizado pelo Service para o formato do Componente
         setCapturedPokemons(
           capturedPokemonsData.map((pokemon) => ({
             id: pokemon.id,
             name: pokemon.name,
             sprite: pokemon.sprite,
-            types: [pokemon.type],
+            types: [pokemon.type as PokeTypes], // Assegura que o TS entenda que é um PokeTypes válido
           })),
         );
       } catch (error) {
-        console.error(error);
+        console.error("Erro ao carregar pokémons capturados:", error);
       } finally {
         if (isActive) {
           setIsCapturedLoading(false);
@@ -239,21 +241,13 @@ export default function Profile() {
             }}
             style={styles.imagem}
           />
-          <Text style={{ fontSize: 32, fontWeight: 700, textAlign: "center" }}>
+          <Text style={{ fontSize: 32, fontWeight: "bold", textAlign: "center" }}>
             {user ? user.charAt(0).toUpperCase() + user.slice(1) : ""}
           </Text>
         </View>
         <View>
           <View style={styles.tabBar}>
-            <Animated.View
-              style={[
-                styles.tabIndicator,
-                {
-                  width: tabWidths[0] || 0,
-                },
-                animatedStyle,
-              ]}
-            />
+            <Animated.View style={[styles.tabIndicator, { width: tabWidths[0] || 0 }, animatedStyle]} />
             <Pressable
               style={[styles.tabButton, tab === "partidas" && styles.tabButtonActive]}
               onPress={() => setTab("partidas")}
@@ -282,7 +276,7 @@ export default function Profile() {
 
           {tab === "partidas" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto" }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8, marginHorizontal: "auto" }}>
                 Histórico de partidas recentes
               </Text>
               <View style={styles.containerPartidas}>
@@ -313,7 +307,7 @@ export default function Profile() {
 
           {tab === "capturados" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto" }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8, marginHorizontal: "auto" }}>
                 Pokémons capturados
               </Text>
               <View style={[styles.searchBox, isSearchFocused && styles.searchBoxFocused]}>
@@ -342,7 +336,8 @@ export default function Profile() {
                       style={[
                         styles.pokemonCard,
                         {
-                          borderColor: PokeTypeStyles[(pokemon.types[0] ?? PokeTypes.Normal) as PokeTypes].color,
+                          borderColor:
+                            PokeTypeStyles[(pokemon.types[0] ?? PokeTypes.Normal) as PokeTypes]?.color || "#ccc",
                         },
                       ]}>
                       <View style={styles.cardImageContainer}>
@@ -372,7 +367,7 @@ export default function Profile() {
 
           {tab === "conta" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginHorizontal: "auto" }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8, marginHorizontal: "auto" }}>
                 Configurações e informações da conta
               </Text>
               <Text style={{ fontSize: 18, marginBottom: 8 }}>
@@ -385,6 +380,7 @@ export default function Profile() {
     </View>
   );
 }
+
 export const styles = StyleSheet.create({
   container: {
     padding: 32,
@@ -455,9 +451,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  tabButtonActive: {
-    // Background removido - agora é feito pelo indicador animado
-  },
+  tabButtonActive: {},
   tabText: {
     color: "#333",
     fontSize: 16,
@@ -493,7 +487,7 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     color: "#111827",
     padding: 0,
-    outlineColor: "transparent",
+    outlineColor: "transparent", // Mantido se houver suporte, mas pode gerar warnings nativos
   },
   capturedGrid: {
     display: "flex",

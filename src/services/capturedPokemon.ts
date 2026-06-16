@@ -1,9 +1,11 @@
 import { PokeTypes } from "@/constants/pokeTypes";
 
 const CAPTURED_BASE_URL = "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/pokemon/v1/captured";
+// Nova URL base para buscar o time/capturados
+const TEAM_BASE_URL = "https://lnh1dhp1mj.execute-api.us-east-1.amazonaws.com/api-pokemon/pokemon/v1/team";
 
 type ApiCapturedPokemon = {
-  id?: number;
+  id?: number | string;
   index?: number | string;
   name?: string;
   image?: string;
@@ -15,6 +17,7 @@ type ApiCapturedPokemon = {
 
 type ApiCapturedResponse = {
   capture?: unknown;
+  team?: unknown;
   captured?: unknown;
   data?: unknown;
   pokemons?: unknown;
@@ -62,7 +65,14 @@ function extractCapturedEntries(payload: unknown): ApiCapturedPokemon[] {
   }
 
   const typedPayload = payload as ApiCapturedResponse;
-  const possibleCollections = [typedPayload.capture, typedPayload.captured, typedPayload.data, typedPayload.pokemons];
+  // Prioriza o array "capture", mas mantém fallback para o resto da estrutura se a API retornar diferente no PUT/DELETE
+  const possibleCollections = [
+    typedPayload.capture,
+    typedPayload.team,
+    typedPayload.captured,
+    typedPayload.data,
+    typedPayload.pokemons,
+  ];
 
   for (const collection of possibleCollections) {
     if (Array.isArray(collection)) {
@@ -74,8 +84,10 @@ function extractCapturedEntries(payload: unknown): ApiCapturedPokemon[] {
 }
 
 function normalizeCapturedPokemon(entry: ApiCapturedPokemon): CapturedPokemon | null {
+  // Pega o "index" que vem no novo formato e trata como "id" numérico
   const id = toPokemonId(entry.id ?? entry.index);
   const name = typeof entry.name === "string" ? entry.name : null;
+  // Pega o "image" do novo formato se "sprite" não existir
   const sprite = typeof entry.sprite === "string" ? entry.sprite : typeof entry.image === "string" ? entry.image : null;
 
   if (!id || !name || !sprite) {
@@ -118,6 +130,7 @@ async function parseResponse(response: Response) {
 }
 
 async function requestCapture(method: "PUT" | "DELETE", userId: string, pokemonId: number) {
+  // Assume-se que o PUT e DELETE continuam na rota /captured, se for na /team você pode alterar CAPTURED_BASE_URL para TEAM_BASE_URL aqui também.
   const response = await fetch(
     `${CAPTURED_BASE_URL}?user-id=${encodeURIComponent(userId)}&pokemon-id=${encodeURIComponent(String(pokemonId))}`,
     {
@@ -143,7 +156,8 @@ async function requestCapture(method: "PUT" | "DELETE", userId: string, pokemonI
 }
 
 async function requestCapturedPokemons(userId: string) {
-  const response = await fetch(`${CAPTURED_BASE_URL}?user-id=${encodeURIComponent(userId)}`, {
+  // Atualizado para usar o endpoint /team dinamicamente de acordo com a ID do usuário
+  const response = await fetch(`${TEAM_BASE_URL}?user-id=${encodeURIComponent(userId)}`, {
     method: "GET",
     headers: {
       Accept: "application/json",
