@@ -1,17 +1,23 @@
 import { PokemonClient } from "pokenode-ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { List } from "@/components/list";
-import { Animated, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, FlatList, Image, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { Alert } from "@/components/alert";
+import { Button } from "@/components/button";
 import { Card } from "@/components/card";
 import { CustomHeader } from "@/components/header";
+import { List } from "@/components/list";
 import { PokeType } from "@/components/poketype";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
-import { Alert } from "@/components/alert";
 import { useAuth } from "@/context/AuthContext";
-import { capturePokemon, loadCapturedPokemons, removeCapturedPokemon } from "../../services/capturedPokemon";
-import { Plus, Trash2 } from "lucide-react-native";
+import {
+  type CapturedPokemon,
+  capturePokemon,
+  loadCapturedPokemons,
+  removeCapturedPokemon,
+} from "../../services/capturedPokemon";
+import { Gift, Trash2, X } from "lucide-react-native";
 
 type PokemonCard = {
   id: number;
@@ -26,7 +32,6 @@ type CaptureAlertState = {
   type: "success" | "error" | "warning" | "info";
 };
 
-// 1. Increased skeleton count to 50
 const SKELETON_DATA: PokemonCard[] = Array.from({ length: 50 }, (_, i) => ({
   id: i,
   name: "",
@@ -34,13 +39,14 @@ const SKELETON_DATA: PokemonCard[] = Array.from({ length: 50 }, (_, i) => ({
   types: [],
 }));
 
-// 2. Extracted Skeleton into its own component to handle the animation lifecycle
+function capitalizePokemonName(name: string) {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 const SkeletonCard = () => {
-  // Initialize opacity at 0.5
   const fadeAnim = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
-    // Loop a sequence that pulses opacity from 0.5 up to 1, then back down
     Animated.loop(
       Animated.sequence([
         Animated.timing(fadeAnim, {
@@ -58,7 +64,6 @@ const SkeletonCard = () => {
   }, [fadeAnim]);
 
   return (
-    // Wrap the card in Animated.View to apply the pulsing opacity
     <Animated.View style={[styles.card, styles.skeletonCard, { opacity: fadeAnim }]}>
       <View style={[styles.cardImage, styles.skeletonPlaceholder]} />
       <View style={styles.cardContent}>
@@ -75,8 +80,9 @@ const SkeletonCard = () => {
 export default function Dashboard() {
   const [pokemon, setPokemon] = useState<PokemonCard[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [capturedPokemonIds, setCapturedPokemonIds] = useState<number[]>([]);
+  const [capturedPokemons, setCapturedPokemons] = useState<CapturedPokemon[]>([]);
   const [isMutatingPokemonId, setIsMutatingPokemonId] = useState<number | null>(null);
+  const [isRemovePickerVisible, setIsRemovePickerVisible] = useState(false);
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertData, setAlertData] = useState<CaptureAlertState>({
     title: "",
@@ -85,25 +91,38 @@ export default function Dashboard() {
   });
   const { userId } = useAuth();
 
-  const capturedPokemonSet = useMemo(() => new Set(capturedPokemonIds), [capturedPokemonIds]);
+  const capturedPokemonSet = useMemo(
+    () => new Set(capturedPokemons.map((capturedPokemon) => capturedPokemon.id)),
+    [capturedPokemons],
+  );
+
+  const sortedCapturedPokemons = useMemo(
+    () => [...capturedPokemons].sort((left, right) => right.capturedAt - left.capturedAt),
+    [capturedPokemons],
+  );
+
+  const randomCaptureCandidates = useMemo(
+    () => pokemon.filter((item) => !capturedPokemonSet.has(item.id)),
+    [capturedPokemonSet, pokemon],
+  );
 
   useEffect(() => {
     let isActive = true;
 
     const loadCaptured = async () => {
       if (!userId) {
-        setCapturedPokemonIds([]);
+        setCapturedPokemons([]);
         return;
       }
 
       try {
-        const capturedPokemons = await loadCapturedPokemons(userId);
+        const capturedPokemonsData = await loadCapturedPokemons(userId);
 
         if (!isActive) {
           return;
         }
 
-        setCapturedPokemonIds(capturedPokemons.map((capturedPokemon) => capturedPokemon.id));
+        setCapturedPokemons(capturedPokemonsData);
       } catch (error) {
         console.error(error);
       }
@@ -161,43 +180,55 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleCaptureToggle = async (item: PokemonCard) => {
+  const handleCaptureRandomPokemon = async () => {
     if (!userId) {
       setAlertData({
         title: "Sessão inválida",
-        message: "Faça login novamente para capturar pokémon.",
+        message: "Faça login novamente para receber um pokémon.",
         type: "error",
       });
       setIsAlertVisible(true);
       return;
     }
 
+    if (isLoading) {
+      setAlertData({
+        title: "Aguarde",
+        message: "Os pokémon ainda estão sendo carregados.",
+        type: "warning",
+      });
+      setIsAlertVisible(true);
+      return;
+    }
+
+    if (randomCaptureCandidates.length === 0) {
+      setAlertData({
+        title: "Catálogo completo",
+        message: "Você já capturou todos os pokémon carregados nesta página.",
+        type: "info",
+      });
+      setIsAlertVisible(true);
+      return;
+    }
+
+    const randomPokemon = randomCaptureCandidates[Math.floor(Math.random() * randomCaptureCandidates.length)];
+
     try {
-      setIsMutatingPokemonId(item.id);
+      setIsMutatingPokemonId(randomPokemon.id);
 
-      if (capturedPokemonSet.has(item.id)) {
-        const nextCapturedPokemons = await removeCapturedPokemon(userId, item.id);
-        setCapturedPokemonIds(nextCapturedPokemons.map((capturedPokemon) => capturedPokemon.id));
-        setAlertData({
-          title: "Pokémon removido",
-          message: `${item.name.charAt(0).toUpperCase() + item.name.slice(1)} foi removido dos capturados.`,
-          type: "success",
-        });
-      } else {
-        const nextCapturedPokemons = await capturePokemon(userId, {
-          id: item.id,
-          name: item.name,
-          sprite: item.sprite,
-          type: item.types[0] ?? PokeTypes.Normal,
-        });
-        setCapturedPokemonIds(nextCapturedPokemons.map((capturedPokemon) => capturedPokemon.id));
-        setAlertData({
-          title: "Pokémon capturado",
-          message: `${item.name.charAt(0).toUpperCase() + item.name.slice(1)} foi capturado com sucesso.`,
-          type: "success",
-        });
-      }
+      const nextCapturedPokemons = await capturePokemon(userId, {
+        id: randomPokemon.id,
+        name: randomPokemon.name,
+        sprite: randomPokemon.sprite,
+        type: randomPokemon.types[0] ?? PokeTypes.Normal,
+      });
 
+      setCapturedPokemons(nextCapturedPokemons);
+      setAlertData({
+        title: "Pokémon recebido",
+        message: `${capitalizePokemonName(randomPokemon.name)} foi adicionado aos capturados.`,
+        type: "success",
+      });
       setIsAlertVisible(true);
     } catch (error) {
       setAlertData({
@@ -211,51 +242,110 @@ export default function Dashboard() {
     }
   };
 
+  const handleOpenRemovePicker = () => {
+    if (!userId) {
+      setAlertData({
+        title: "Sessão inválida",
+        message: "Faça login novamente para gerenciar seus capturados.",
+        type: "error",
+      });
+      setIsAlertVisible(true);
+      return;
+    }
+
+    if (capturedPokemons.length === 0) {
+      setAlertData({
+        title: "Sem capturados",
+        message: "Você ainda não tem pokémon capturados para remover.",
+        type: "info",
+      });
+      setIsAlertVisible(true);
+      return;
+    }
+
+    setIsRemovePickerVisible(true);
+  };
+
+  const handleRemoveCapturedPokemon = async (pokemonId: number) => {
+    if (!userId) {
+      setIsRemovePickerVisible(false);
+      return;
+    }
+
+    const pokemonToRemove = capturedPokemons.find((capturedPokemon) => capturedPokemon.id === pokemonId);
+
+    if (!pokemonToRemove) {
+      return;
+    }
+
+    try {
+      setIsMutatingPokemonId(pokemonId);
+
+      const nextCapturedPokemons = await removeCapturedPokemon(userId, pokemonId);
+      setCapturedPokemons(nextCapturedPokemons);
+      setIsRemovePickerVisible(false);
+      setAlertData({
+        title: "Pokémon removido",
+        message: `${capitalizePokemonName(pokemonToRemove.name)} foi removido dos capturados.`,
+        type: "success",
+      });
+      setIsAlertVisible(true);
+    } catch (error) {
+      setAlertData({
+        title: "Erro",
+        message: error instanceof Error ? error.message : "Não foi possível remover o pokémon.",
+        type: "error",
+      });
+      setIsAlertVisible(true);
+    } finally {
+      setIsMutatingPokemonId(null);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <CustomHeader />
+
+      <View style={styles.pageActions}>
+
+        <View style={styles.actionsRow}>
+          <Button
+            title={isMutatingPokemonId ? "Processando..." : "Receber aleatório"}
+            icon={Gift}
+            onPress={handleCaptureRandomPokemon}
+            style={styles.primaryActionButton}
+            textStyle={styles.primaryActionButtonText}
+          />
+          <Button
+            title="Escolher para remover"
+            icon={Trash2}
+            onPress={handleOpenRemovePicker}
+            style={styles.secondaryActionButton}
+            textStyle={styles.secondaryActionButtonText}
+          />
+        </View>
+      </View>
+
       <List
         data={isLoading ? SKELETON_DATA : pokemon}
         onLoadMore={() => {}}
         listStyle={styles.list}
         renderItemContent={(item) => {
-          // 3. Render the new Animated Skeleton Component
           if (isLoading) {
             return <SkeletonCard />;
           }
 
-          const isCaptured = capturedPokemonSet.has(item.id);
-
           return (
             <View style={styles.cardWrapper}>
-              <Card
-                style={[
-                  styles.card,
-                  { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color },
-                  isCaptured && styles.cardCaptured,
-                ]}>
+              <Card style={[styles.card, { borderColor: PokeTypeStyles[(item.types[0] ?? PokeTypes.Normal) as PokeTypes].color }]}>
                 <View style={styles.cardImageContainer}>
                   <Image style={styles.cardImage} source={{ uri: item.sprite }} resizeMode="contain" />
                 </View>
                 <View style={styles.cardContent}>
                   <View style={styles.cardHeaderRow}>
                     <View>
-                      <Text style={styles.cardTitle}>{item.name.charAt(0).toUpperCase() + item.name.slice(1)}</Text>
+                      <Text style={styles.cardTitle}>{capitalizePokemonName(item.name)}</Text>
                       <Text style={styles.cardSubtitle}>Nº {item.id}</Text>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.captureBadge,
-                        isCaptured ? styles.captureBadgeActive : styles.captureBadgeInactive,
-                      ]}>
-                      <Text
-                        style={[
-                          styles.captureBadgeText,
-                          isCaptured ? styles.captureBadgeTextActive : styles.captureBadgeTextInactive,
-                        ]}>
-                        {isCaptured ? "Capturado" : "Livre"}
-                      </Text>
                     </View>
                   </View>
 
@@ -266,25 +356,59 @@ export default function Dashboard() {
                   </View>
                 </View>
               </Card>
-
-              <Pressable
-                accessibilityRole="button"
-                disabled={isMutatingPokemonId === item.id}
-                onPress={() => handleCaptureToggle(item)}
-                style={[styles.captureButton, isCaptured ? styles.removeButton : styles.addButton]}>
-                {isCaptured ? (
-                  <Trash2 size={16} color="#fff" strokeWidth={2.5} />
-                ) : (
-                  <Plus size={16} color="#fff" strokeWidth={2.5} />
-                )}
-                <Text style={styles.captureButtonText}>
-                  {isMutatingPokemonId === item.id ? "Processando..." : isCaptured ? "Remover capturado" : "Capturar"}
-                </Text>
-              </Pressable>
             </View>
           );
         }}
       />
+
+      <Modal
+        visible={isRemovePickerVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsRemovePickerVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Escolher para remover</Text>
+                <Text style={styles.modalSubtitle}>Toque em um pokémon capturado para removê-lo da sua lista.</Text>
+              </View>
+              <Pressable accessibilityRole="button" onPress={() => setIsRemovePickerVisible(false)} style={styles.modalCloseButton}>
+                <X size={18} color="#0f172a" strokeWidth={2.5} />
+              </Pressable>
+            </View>
+
+            {sortedCapturedPokemons.length === 0 ? (
+              <View style={styles.emptyCapturedState}>
+                <Text style={styles.emptyCapturedTitle}>Nenhum capturado encontrado</Text>
+                <Text style={styles.emptyCapturedSubtitle}>Capture um pokémon primeiro para liberar a remoção.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={sortedCapturedPokemons}
+                keyExtractor={(item) => String(item.id)}
+                contentContainerStyle={styles.modalList}
+                renderItem={({ item }) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={isMutatingPokemonId === item.id}
+                    onPress={() => handleRemoveCapturedPokemon(item.id)}
+                    style={styles.modalPokemonRow}>
+                    <View style={styles.modalPokemonInfo}>
+                      <Image style={styles.modalPokemonImage} source={{ uri: item.sprite }} resizeMode="contain" />
+                      <View>
+                        <Text style={styles.modalPokemonName}>{capitalizePokemonName(item.name)}</Text>
+                        <Text style={styles.modalPokemonMeta}>Nº {item.id}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.modalRemoveText}>{isMutatingPokemonId === item.id ? "Removendo..." : "Remover"}</Text>
+                  </Pressable>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <Alert
         title={alertData.title}
@@ -312,6 +436,47 @@ export const styles = StyleSheet.create({
       default: "bold",
     }),
   },
+  pageActions: {
+    gap: 16,
+    paddingVertical: 8,
+  },
+  pageCopy: {
+    gap: 6,
+  },
+  pageTitle: {
+    color: "#111827",
+    fontSize: 26,
+    fontWeight: Platform.select({
+      android: "900",
+      default: "bold",
+    }),
+  },
+  pageSubtitle: {
+    color: "#4b5563",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "stretch",
+  },
+  primaryActionButton: {
+    flex: 1,
+    width: "auto",
+    backgroundColor: "#2563eb",
+  },
+  secondaryActionButton: {
+    flex: 1,
+    width: "auto",
+    backgroundColor: "#0f172a",
+  },
+  primaryActionButtonText: {
+    fontSize: 14,
+  },
+  secondaryActionButtonText: {
+    fontSize: 14,
+  },
   list: {
     width: "100%",
     display: "flex",
@@ -320,6 +485,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 16,
     flexGrow: 1,
+    paddingBottom: 24,
   },
   cardWrapper: {
     gap: 10,
@@ -342,9 +508,6 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     overflow: "hidden",
-  },
-  cardCaptured: {
-    backgroundColor: "#fffaf0",
   },
   cardHeaderRow: {
     flexDirection: "row",
@@ -389,47 +552,99 @@ export const styles = StyleSheet.create({
     gap: 8,
     height: 56,
   },
-  captureBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    justifyContent: "flex-end",
   },
-  captureBadgeActive: {
-    backgroundColor: "#dcfce7",
+  modalCard: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    maxHeight: "82%",
+    gap: 16,
   },
-  captureBadgeInactive: {
-    backgroundColor: "#e2e8f0",
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
   },
-  captureBadgeText: {
-    fontSize: 12,
+  modalTitle: {
+    color: "#0f172a",
+    fontSize: 20,
     fontWeight: "800",
   },
-  captureBadgeTextActive: {
-    color: "#166534",
+  modalSubtitle: {
+    color: "#475569",
+    fontSize: 13,
+    marginTop: 4,
+    maxWidth: 280,
   },
-  captureBadgeTextInactive: {
-    color: "#334155",
-  },
-  captureButton: {
-    height: 46,
-    borderRadius: 14,
-    flexDirection: "row",
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#e2e8f0",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 16,
   },
-  addButton: {
-    backgroundColor: "#16a34a",
+  modalList: {
+    gap: 10,
+    paddingBottom: 8,
   },
-  removeButton: {
-    backgroundColor: "#dc2626",
+  modalPokemonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  captureButtonText: {
-    color: "#fff",
-    fontSize: 15,
+  modalPokemonInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  modalPokemonImage: {
+    width: 48,
+    height: 48,
+  },
+  modalPokemonName: {
+    color: "#0f172a",
+    fontSize: 16,
     fontWeight: "800",
+  },
+  modalPokemonMeta: {
+    color: "#64748b",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  modalRemoveText: {
+    color: "#dc2626",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  emptyCapturedState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyCapturedTitle: {
+    color: "#0f172a",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  emptyCapturedSubtitle: {
+    color: "#64748b",
+    fontSize: 13,
+    textAlign: "center",
   },
   skeletonCard: {
     borderColor: "#E1E9EE",

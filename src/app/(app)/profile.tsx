@@ -29,8 +29,9 @@ import { useAuth } from "@/context/AuthContext";
 import { PokeType } from "@/components/poketype";
 import { PokeTypes, PokeTypeStyles } from "@/constants/pokeTypes";
 
-// Service que criamos e ajustamos
+// Services
 import { loadCapturedPokemons } from "../../services/capturedPokemon";
+import { loadUserStats, type UserStats } from "../../services/currentUser";
 
 type PokemonCard = {
   id: number;
@@ -76,7 +77,12 @@ function AccountIcon({ color }: TabIconProps) {
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
       <Circle cx="12" cy="8" r="3.5" stroke={color} strokeWidth={2} />
-      <Path d="M5.5 19c1.7-3 4-4.5 6.5-4.5S16.3 16 18.5 19" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path
+        d="M5.5 19c1.7-3 4-4.5 6.5-4.5S16.3 16 18.5 19"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
     </Svg>
   );
 }
@@ -95,11 +101,19 @@ function TabIcon({ index, isActive }: { index: number; isActive: boolean }) {
 
 function TabLabel({ index, activeIndex, children }: TabLabelProps) {
   const animatedTextStyle = useAnimatedStyle(() => {
-    const color = interpolateColor(activeIndex.value, [index - 1, index, index + 1], ["#333333", "#ffffff", "#333333"]);
+    const color = interpolateColor(
+      activeIndex.value,
+      [index - 1, index, index + 1],
+      ["#333333", "#ffffff", "#333333"],
+    );
     return { color };
   });
 
-  return <Animated.Text style={[styles.tabText, animatedTextStyle]}>{children}</Animated.Text>;
+  return (
+    <Animated.Text style={[styles.tabText, animatedTextStyle]}>
+      {children}
+    </Animated.Text>
+  );
 }
 
 function TabItem({
@@ -125,15 +139,23 @@ function TabItem({
 
 export default function Profile() {
   const { user, userId } = useAuth();
-  const [tab, setTab] = useState<"partidas" | "capturados" | "conta">("partidas");
+  const [tab, setTab] = useState<"partidas" | "capturados" | "conta">(
+    "partidas",
+  );
   const [tabWidths, setTabWidths] = useState<number[]>([0, 0, 0]);
   const [tabPositions, setTabPositions] = useState<number[]>([0, 0, 0]);
   const animatedX = useSharedValue(0);
   const animatedTabIndex = useSharedValue(0);
+
+  // Estados de Capturados
   const [capturedPokemons, setCapturedPokemons] = useState<PokemonCard[]>([]);
   const [searchText, setSearchText] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isCapturedLoading, setIsCapturedLoading] = useState(false);
+
+  // Estados Individuais da Conta
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
 
   const tabOrder = ["partidas", "capturados", "conta"];
   const currentTabIndex = tabOrder.indexOf(tab);
@@ -145,7 +167,9 @@ export default function Profile() {
       return capturedPokemons;
     }
 
-    return capturedPokemons.filter((pokemon) => pokemon.name.toLowerCase().includes(normalizedSearch));
+    return capturedPokemons.filter((pokemon) =>
+      pokemon.name.toLowerCase().includes(normalizedSearch),
+    );
   }, [capturedPokemons, searchText]);
 
   useEffect(() => {
@@ -162,10 +186,9 @@ export default function Profile() {
     }
   }, [currentTabIndex, tabPositions]);
 
+  // Efeito para carregar Pokémons Capturados
   useEffect(() => {
-    if (tab !== "capturados") {
-      return;
-    }
+    if (tab !== "capturados") return;
 
     let isActive = true;
 
@@ -174,38 +197,65 @@ export default function Profile() {
         setIsCapturedLoading(true);
 
         if (!userId) {
-          if (isActive) {
-            setCapturedPokemons([]);
-          }
+          if (isActive) setCapturedPokemons([]);
           return;
         }
 
-        // Faz o request usando o novo endpoint através do service atualizado
         const capturedPokemonsData = await loadCapturedPokemons(userId);
 
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
-        // Mapeia o array normalizado pelo Service para o formato do Componente
         setCapturedPokemons(
           capturedPokemonsData.map((pokemon) => ({
             id: pokemon.id,
             name: pokemon.name,
             sprite: pokemon.sprite,
-            types: [pokemon.type as PokeTypes], // Assegura que o TS entenda que é um PokeTypes válido
+            types: [pokemon.type as PokeTypes],
           })),
         );
       } catch (error) {
         console.error("Erro ao carregar pokémons capturados:", error);
       } finally {
-        if (isActive) {
-          setIsCapturedLoading(false);
-        }
+        if (isActive) setIsCapturedLoading(false);
       }
     };
 
     loadCapturedPokemonsForProfile();
+
+    return () => {
+      isActive = false;
+    };
+  }, [tab, userId]);
+
+  // Efeito para carregar as Estatísticas da Conta (CHAMADAS INDIVIDUAIS)
+  useEffect(() => {
+    if (tab !== "conta") return;
+
+    let isActive = true;
+
+    const fetchStats = async () => {
+      try {
+        setIsStatsLoading(true);
+
+        if (!userId) {
+          if (isActive) setStats(null);
+          return;
+        }
+
+        const data = await loadUserStats(userId);
+
+        if (isActive) {
+          setStats(data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar estatísticas da conta:", error);
+        if (isActive) setStats(null);
+      } finally {
+        if (isActive) setIsStatsLoading(false);
+      }
+    };
+
+    fetchStats();
 
     return () => {
       isActive = false;
@@ -233,7 +283,10 @@ export default function Profile() {
   return (
     <View style={styles.container}>
       <CustomHeader />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.containerNome}>
           <Image
             source={{
@@ -241,34 +294,66 @@ export default function Profile() {
             }}
             style={styles.imagem}
           />
-          <Text style={{ fontSize: 32, fontWeight: "bold", textAlign: "center" }}>
+          <Text
+            style={{ fontSize: 32, fontWeight: "bold", textAlign: "center" }}
+          >
             {user ? user.charAt(0).toUpperCase() + user.slice(1) : ""}
           </Text>
         </View>
         <View>
           <View style={styles.tabBar}>
-            <Animated.View style={[styles.tabIndicator, { width: tabWidths[0] || 0 }, animatedStyle]} />
+            <Animated.View
+              style={[
+                styles.tabIndicator,
+                { width: tabWidths[0] || 0 },
+                animatedStyle,
+              ]}
+            />
             <Pressable
-              style={[styles.tabButton, tab === "partidas" && styles.tabButtonActive]}
+              style={[
+                styles.tabButton,
+                tab === "partidas" && styles.tabButtonActive,
+              ]}
               onPress={() => setTab("partidas")}
-              onLayout={handleTabLayout(0)}>
-              <TabItem index={0} isActive={tab === "partidas"} activeIndex={animatedTabIndex}>
+              onLayout={handleTabLayout(0)}
+            >
+              <TabItem
+                index={0}
+                isActive={tab === "partidas"}
+                activeIndex={animatedTabIndex}
+              >
                 Partidas
               </TabItem>
             </Pressable>
             <Pressable
-              style={[styles.tabButton, tab === "capturados" && styles.tabButtonActive]}
+              style={[
+                styles.tabButton,
+                tab === "capturados" && styles.tabButtonActive,
+              ]}
               onPress={() => setTab("capturados")}
-              onLayout={handleTabLayout(1)}>
-              <TabItem index={1} isActive={tab === "capturados"} activeIndex={animatedTabIndex}>
+              onLayout={handleTabLayout(1)}
+            >
+              <TabItem
+                index={1}
+                isActive={tab === "capturados"}
+                activeIndex={animatedTabIndex}
+              >
                 Capturados
               </TabItem>
             </Pressable>
             <Pressable
-              style={[styles.tabButton, tab === "conta" && styles.tabButtonActive]}
+              style={[
+                styles.tabButton,
+                tab === "conta" && styles.tabButtonActive,
+              ]}
               onPress={() => setTab("conta")}
-              onLayout={handleTabLayout(2)}>
-              <TabItem index={2} isActive={tab === "conta"} activeIndex={animatedTabIndex}>
+              onLayout={handleTabLayout(2)}
+            >
+              <TabItem
+                index={2}
+                isActive={tab === "conta"}
+                activeIndex={animatedTabIndex}
+              >
                 Conta
               </TabItem>
             </Pressable>
@@ -276,7 +361,14 @@ export default function Profile() {
 
           {tab === "partidas" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8, marginHorizontal: "auto" }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  marginBottom: 8,
+                  marginHorizontal: "auto",
+                }}
+              >
                 Histórico de partidas recentes
               </Text>
               <View style={styles.containerPartidas}>
@@ -307,10 +399,22 @@ export default function Profile() {
 
           {tab === "capturados" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8, marginHorizontal: "auto" }}>
-                Pokémons capturados
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  marginBottom: 8,
+                  marginHorizontal: "auto",
+                }}
+              >
+                Pokémons capturados: {capturedPokemons.length}/25
               </Text>
-              <View style={[styles.searchBox, isSearchFocused && styles.searchBoxFocused]}>
+              <View
+                style={[
+                  styles.searchBox,
+                  isSearchFocused && styles.searchBoxFocused,
+                ]}
+              >
                 <Search size={18} color="#9ca3af" strokeWidth={2.5} />
                 <TextInput
                   value={searchText}
@@ -325,41 +429,58 @@ export default function Profile() {
                   style={styles.searchInput}
                 />
               </View>
-
               {isCapturedLoading ? (
-                <Text style={styles.emptyStateText}>Carregando pokémons capturados...</Text>
+                <Text style={styles.emptyStateText}>
+                  Carregando pokémons capturados...
+                </Text>
               ) : filteredCapturedPokemons.length > 0 ? (
-                <View style={styles.capturedGrid}>
-                  {filteredCapturedPokemons.map((pokemon) => (
-                    <Card
-                      key={pokemon.id}
-                      style={[
-                        styles.pokemonCard,
-                        {
-                          borderColor:
-                            PokeTypeStyles[(pokemon.types[0] ?? PokeTypes.Normal) as PokeTypes]?.color || "#ccc",
-                        },
-                      ]}>
-                      <View style={styles.cardImageContainer}>
-                        <Image style={styles.cardImage} source={{ uri: pokemon.sprite }} resizeMode="contain" />
-                      </View>
-                      <View style={styles.cardContent}>
-                        <Text style={styles.cardTitle}>
-                          {pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}
-                        </Text>
-                        <Text style={styles.cardSubtitle}>Nº {pokemon.id}</Text>
-                        <View style={styles.typesContainer}>
-                          {pokemon.types.map((type) => (
-                            <PokeType key={type} type={type} />
-                          ))}
+                <View>
+
+                  <View style={styles.capturedGrid}>
+                    {filteredCapturedPokemons.map((pokemon) => (
+                      <Card
+                        key={pokemon.id}
+                        style={[
+                          styles.pokemonCard,
+                          {
+                            borderColor:
+                              PokeTypeStyles[
+                                (pokemon.types[0] ??
+                                  PokeTypes.Normal) as PokeTypes
+                              ]?.color || "#ccc",
+                          },
+                        ]}
+                      >
+                        <View style={styles.cardImageContainer}>
+                          <Image
+                            style={styles.cardImage}
+                            source={{ uri: pokemon.sprite }}
+                            resizeMode="contain"
+                          />
                         </View>
-                      </View>
-                    </Card>
-                  ))}
+                        <View style={styles.cardContent}>
+                          <Text style={styles.cardTitle}>
+                            {pokemon.name.charAt(0).toUpperCase() +
+                              pokemon.name.slice(1)}
+                          </Text>
+                          <Text style={styles.cardSubtitle}>
+                            Nº {pokemon.id}
+                          </Text>
+                          <View style={styles.typesContainer}>
+                            {pokemon.types.map((type) => (
+                              <PokeType key={type} type={type} />
+                            ))}
+                          </View>
+                        </View>
+                      </Card>
+                    ))}
+                  </View>
                 </View>
               ) : (
                 <Text style={styles.emptyStateText}>
-                  {searchText.trim() ? "Nenhum pokémon encontrado para essa busca." : "Nenhum pokémon capturado ainda."}
+                  {searchText.trim()
+                    ? "Nenhum pokémon encontrado para essa busca."
+                    : "Nenhum pokémon capturado ainda."}
                 </Text>
               )}
             </View>
@@ -367,12 +488,59 @@ export default function Profile() {
 
           {tab === "conta" && (
             <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8, marginHorizontal: "auto" }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  marginBottom: 16,
+                  marginHorizontal: "auto",
+                }}
+              >
                 Configurações e informações da conta
               </Text>
-              <Text style={{ fontSize: 18, marginBottom: 8 }}>
-                Usuário: {user ? user.charAt(0).toUpperCase() + user.slice(1) : ""}
-              </Text>
+
+              {/*<Text>{userId}</Text> */}
+
+              {isStatsLoading ? (
+                <Text style={styles.emptyStateText}>
+                  Carregando informações da conta...
+                </Text>
+              ) : stats ? (
+                <Card style={styles.accountCard}>
+                  <Text style={styles.accountInfoText}>
+                    Usuário:{" "}
+                    {stats.username ||
+                      (user
+                        ? user.charAt(0).toUpperCase() + user.slice(1)
+                        : "...")}
+                  </Text>
+
+                  <View style={styles.statsRow}>
+                    <View style={styles.statBox}>
+                      <Text style={styles.statLabel}>Nível</Text>
+                      <Text style={styles.statValue}>{stats.level}</Text>
+                    </View>
+
+                    <View style={styles.statBox}>
+                      <Text style={styles.statLabel}>Vitórias</Text>
+                      <Text style={[styles.statValue, { color: "#22c55e" }]}>
+                        {stats.vitorias}
+                      </Text>
+                    </View>
+
+                    <View style={styles.statBox}>
+                      <Text style={styles.statLabel}>Derrotas</Text>
+                      <Text style={[styles.statValue, { color: "#ef4444" }]}>
+                        {stats.derrotas}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              ) : (
+                <Text style={styles.emptyStateText}>
+                  Nenhuma estatística encontrada.
+                </Text>
+              )}
             </View>
           )}
         </View>
@@ -487,7 +655,7 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     color: "#111827",
     padding: 0,
-    outlineColor: "transparent", // Mantido se houver suporte, mas pode gerar warnings nativos
+    outlineColor: "transparent",
   },
   capturedGrid: {
     display: "flex",
@@ -537,10 +705,63 @@ export const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     textAlign: "center",
+    color: "#6b7280",
   },
   containerPartidas: {
     display: "flex",
     gap: 10,
     alignItems: "center",
+  },
+  accountCard: {
+    padding: 24,
+    width: "100%",
+    maxWidth: 600,
+    marginHorizontal: "auto",
+    alignItems: "center",
+    gap: 16,
+  },
+  accountInfoText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 16,
+    marginTop: 10,
+    width: "100%",
+  },
+  statBox: {
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    minWidth: 100,
+    flex: 1,
+  },
+  pokemonAmount: {
+    fontSize: 18,
+    fontWeight: Platform.select({
+      android: "900",
+      default: "bold",
+    }),
+    color: "#1e222b",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  statLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "600",
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#111827",
   },
 });

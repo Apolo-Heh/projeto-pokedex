@@ -33,6 +33,8 @@ export type CapturedPokemon = {
 
 export type CapturedPokemonInput = Omit<CapturedPokemon, "capturedAt">;
 
+const MAX_CAPTURED_POKEMON = 25;
+
 const capturedPokemonCache = new Map<string, CapturedPokemon[]>();
 
 function isPokeType(value: unknown): value is PokeTypes {
@@ -196,6 +198,12 @@ export async function isPokemonCaptured(userId: string, pokemonId: number) {
 }
 
 export async function capturePokemon(userId: string, pokemon: CapturedPokemonInput) {
+  const currentCapturedPokemons = await loadCapturedPokemons(userId);
+
+  if (currentCapturedPokemons.length >= MAX_CAPTURED_POKEMON) {
+    throw new Error(`Você já atingiu o limite de ${MAX_CAPTURED_POKEMON} pokémon capturados.`);
+  }
+
   const payload = await requestCapture("PUT", userId, pokemon.id);
   const capturedPokemons = normalizeCapturedResponse(payload);
 
